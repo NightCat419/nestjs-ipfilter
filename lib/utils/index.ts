@@ -1,54 +1,93 @@
-import { isIP } from 'node:net';
+import { isIP, isIPv4, isIPv6 } from 'node:net';
 
 import { IpFilterModuleOptions } from '../interfaces';
 
 export function getIp(request: Request, options: IpFilterModuleOptions) {
   if (request.headers) {
     // Default nginx proxy/cgi; alternative to x-forwarded-for, used by some proxies.
-    if (isIP(request.headers['x-real-ip'])) {
+    if (isIPv4(request.headers['x-real-ip'])) {
       return request.headers['x-real-ip'];
     }
 
-    // Load-balancers (AWS ELB) or proxies.
-    const forwardedFor = getIpFromXForwardedFor(
-      request.headers['x-forwarded-for'],
-      options.trustProxy,
-    );
-    if (forwardedFor !== null) return forwardedFor;
-
     // Standard headers used by Amazon EC2, Heroku, and others
-    if (isIP(request.headers['x-client-ip']) !== 0) {
+    if (isIPv4(request.headers['x-client-ip'])) {
       return request.headers['x-client-ip'];
     }
 
     // Fastly and Firebase hosting header (When forward to cloud function)
-    if (isIP(request.headers['fastly-client-ip'])) {
+    if (isIPv4(request.headers['fastly-client-ip'])) {
       return request.headers['fastly-client-ip'];
     }
 
     // Cloudflare.
     // @see https://developers.cloudflare.com/fundamentals/reference/http-request-headers/
     // CF-Connecting-IP - applied to every request to the origin.
-    if (isIP(request.headers['cf-connecting-ip'])) {
+    if (isIPv4(request.headers['cf-connecting-ip'])) {
       return request.headers['cf-connecting-ip'];
     }
 
     // Cloudflare fallback
     // https://blog.cloudflare.com/eliminating-the-last-reasons-to-not-enable-ipv6/#introducingpseudoipv4
-    if (isIP(request.headers['Cf-Pseudo-IPv4'])) {
+    if (isIPv4(request.headers['Cf-Pseudo-IPv4'])) {
       return request.headers['Cf-Pseudo-IPv4'];
     }
 
     // Akamai and Cloudflare: True-Client-IP.
-    if (isIP(request.headers['true-client-ip'])) {
+    if (isIPv4(request.headers['true-client-ip'])) {
       return request.headers['true-client-ip'];
     }
 
     // Google Cloud App Engine
     // https://cloud.google.com/appengine/docs/standard/go/reference/request-response-headers
-    if (isIP(request.headers['x-appengine-user-ip'])) {
+    if (isIPv4(request.headers['x-appengine-user-ip'])) {
       return request.headers['x-appengine-user-ip'];
     }
+
+        // Default nginx proxy/cgi; alternative to x-forwarded-for, used by some proxies.
+    if (isIPv4(request.headers['x-real-ip'])) {
+      return request.headers['x-real-ip'];
+    }
+
+    // Standard headers used by Amazon EC2, Heroku, and others
+    if (isIPv6(request.headers['x-client-ip'])) {
+      return request.headers['x-client-ip'];
+    }
+
+    // Fastly and Firebase hosting header (When forward to cloud function)
+    if (isIPv6(request.headers['fastly-client-ip'])) {
+      return request.headers['fastly-client-ip'];
+    }
+
+    // Cloudflare.
+    // @see https://developers.cloudflare.com/fundamentals/reference/http-request-headers/
+    // CF-Connecting-IP - applied to every request to the origin.
+    if (isIPv6(request.headers['cf-connecting-ip'])) {
+      return request.headers['cf-connecting-ip'];
+    }
+
+    // Cloudflare fallback
+    // https://blog.cloudflare.com/eliminating-the-last-reasons-to-not-enable-ipv6/#introducingpseudoipv4
+    if (isIPv6(request.headers['Cf-Pseudo-IPv4'])) {
+      return request.headers['Cf-Pseudo-IPv4'];
+    }
+
+    // Akamai and Cloudflare: True-Client-IP.
+    if (isIPv6(request.headers['true-client-ip'])) {
+      return request.headers['true-client-ip'];
+    }
+
+    // Google Cloud App Engine
+    // https://cloud.google.com/appengine/docs/standard/go/reference/request-response-headers
+    if (isIPv6(request.headers['x-appengine-user-ip'])) {
+      return request.headers['x-appengine-user-ip'];
+    }
+    
+    // Load-balancers (AWS ELB) or proxies.
+    const forwardedFor = getIpFromXForwardedFor(
+      request.headers['x-forwarded-for'],
+      options.trustProxy,
+    );
+    if (forwardedFor !== null) return forwardedFor;
   }
 
   return null;
